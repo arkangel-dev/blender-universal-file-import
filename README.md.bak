@@ -4,7 +4,7 @@ Import files into Blender from a single button
 - [X] Collada
 - [X] Alembic
 - [X] Universal Scene Description
-- [X] SVG as Grease Pencil
+- [ ] SVG as Grease Pencil
 - [ ] Motion Capture
 - [ ] Scalable Vector Graphics
 - [ ] Starford

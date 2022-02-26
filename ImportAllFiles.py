@@ -31,6 +31,7 @@ def read_some_data(context, filepath, ):
     if (file_extension.lower() in ['dae']): bpy.ops.wm.uni_import_collada('INVOKE_DEFAULT')
     if (file_extension.lower() in ['abc']): bpy.ops.wm.uni_import_alembic('INVOKE_DEFAULT')
     if (file_extension.lower() in ['usd', 'usda', 'usdc']): bpy.ops.wm.uni_import_usd('INVOKE_DEFAULT')
+    if (file_extension.lower() in ['svg']): bpy.ops.wm.uni_import_svggp('INVOKE_DEFAULT')
     return {'FINISHED'}
 
 class WM_OT_ImportCollada(bpy.types.Operator):
@@ -69,7 +70,6 @@ class WM_OT_ImportCollada(bpy.types.Operator):
 
         last_box = layout.box()
         last_box.prop(context.scene, 'collada_keep_bind_info')
-
 class WM_OT_ImportAlembic(bpy.types.Operator):
     bl_label = "Import Alembic File"
     bl_idname = "wm.uni_import_alembic"
@@ -103,7 +103,6 @@ class WM_OT_ImportAlembic(bpy.types.Operator):
         options_box_col.prop(context.scene, 'alembic_is_sequence')
         options_box_col.prop(context.scene, 'alembic_validate_meshes')
         options_box_col.prop(context.scene, 'alembic_always_add_cache_reader')   
-
 class WM_OT_ImportUniversalSceneDescription(bpy.types.Operator):
     bl_label = "Import USD File"
     bl_idname = "wm.uni_import_usd"
@@ -195,18 +194,32 @@ class WM_OT_ImportUniversalSceneDescription(bpy.types.Operator):
 
         second_box.prop(context.scene, 'usd_md_light_intensity_scale')
 
+        # Third Box
         third_box = layout.box()
-
         experimental_row = third_box.row()
         experimental_row_label_col = experimental_row.column()
         experimental_row_checkbox_col = experimental_row.column()
-
         experimental_row_label_col.label(text='Experimental')
         experimental_row_checkbox_col.prop(context.scene, 'usd_md_exp_import_usd_preview')
         experimental_row_checkbox_col.prop(context.scene, 'usd_md_exp_set_material_blend')
+class WM_OT_ImportSVGAsGreasePencil(bpy.types.Operator):
+    bl_label = "Import SVG as Grease Pencil"
+    bl_idname = "wm.uni_import_svggp"
 
+    def execute(self, context):
+        bpy.ops.wm.gpencil_import_svg(
+            filepath=context.scene.targeted_file,
+            resolution=context.scene.svg_gp_resolution,
+            scale=context.scene.svg_gp_scale)
+        return {'FINISHED'}
 
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
 
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(context.scene, 'svg_gp_resolution')
+        layout.prop(context.scene, 'svg_gp_scale')
 
 class TEST_OT_ImportSomeData(bpy.types.Operator, ImportHelper):
     bl_label = "Import Some Data"
@@ -225,10 +238,9 @@ def register():
     bpy.utils.register_class(WM_OT_ImportCollada)
     bpy.utils.register_class(WM_OT_ImportAlembic)
     bpy.utils.register_class(WM_OT_ImportUniversalSceneDescription)
+    bpy.utils.register_class(WM_OT_ImportSVGAsGreasePencil)
     
-    bpy.types.VIEW3D_MT_add.append(view3d_menu_add)
     bpy.types.TOPBAR_MT_file_import.append(view3d_menu_add)
-
     bpy.types.Scene.targeted_file = ""
 
     # Collada
@@ -256,25 +268,24 @@ def register():
     bpy.types.Scene.usd_dt_volumes = bpy.props.BoolProperty(name='Volume', default=True)
     bpy.types.Scene.usd_path_mask = bpy.props.StringProperty(name='Path Mask', description='Import only the subset of the USD scene rooted at the given primitive')
     bpy.types.Scene.usd_scale = bpy.props.FloatProperty(name='Scale', description='Value by which to enlarge or shrink the objects with respect to the worlds origin')
-
     bpy.types.Scene.usd_md_uv_coords = bpy.props.BoolProperty(name='UV Coordinates', description='Read mesh UV coordinates', default=True)
     bpy.types.Scene.usd_md_vertex_colors = bpy.props.BoolProperty(name='Vertex Colors', description='Read mesh vertex colors')
-    
     bpy.types.Scene.usd_md_incl_subdivision = bpy.props.BoolProperty(name='Visible Primitives Only', description='')
     bpy.types.Scene.usd_md_incl_import_instance_proxies = bpy.props.BoolProperty(name='Import Instance Proxies', description='Create unique Blender objects for USd instances', default=True)
     bpy.types.Scene.usd_md_incl_visible_primitives_only = bpy.props.BoolProperty(name='Visible primitives only', description='Do not import invisible USD primitives. Only applies to primitives with a non-animated visibility attribute. Primitives with animated visibility will always be imported', default=True)
     bpy.types.Scene.usd_md_incl_guide = bpy.props.BoolProperty(name='Guide', description='Import guide geometry')
     bpy.types.Scene.usd_md_incl_proxy = bpy.props.BoolProperty(name='Proxy', description='Import proxy geometry', default=True)
     bpy.types.Scene.usd_md_incl_render = bpy.props.BoolProperty(name='Render', description='Import final render geometry', default=True)
-    
     bpy.types.Scene.usd_md_opt_set_frame_range = bpy.props.BoolProperty(name='Set Frame range', description='Update the scenes start and end frame to match those of hte USD archive', default=True)
     bpy.types.Scene.usd_md_opt_relative_path = bpy.props.BoolProperty(name='Relative Path', description='Select the file relative to the blend file', default=True)
     bpy.types.Scene.usd_md_opt_collection = bpy.props.BoolProperty(name='Create Collection', description='Add all objects to a new collection')
-    
     bpy.types.Scene.usd_md_light_intensity_scale = bpy.props.FloatProperty(name='Light Intensity Scale', description='Scale for the intensity of imported lights', default=1)
-
     bpy.types.Scene.usd_md_exp_import_usd_preview = bpy.props.BoolProperty(name='Import USD Preview', description='Convert UsdPreviewSurface shaders to Principled BSDF shader networks')
     bpy.types.Scene.usd_md_exp_set_material_blend = bpy.props.BoolProperty(name='Set Material Blender', description='If the Import USD Preview option is enabled, the material blender method will automatically be set based on the shaders opacity and opacityThreshold inputs', default=True)
+
+    # Import SVG as Grease Pencil
+    bpy.types.Scene.svg_gp_resolution = bpy.props.IntProperty(name='Resolution', description='Resolution of the generated strokes', default=10)
+    bpy.types.Scene.svg_gp_scale = bpy.props.FloatProperty(name='Scale', description='Scale of the final strokes', default=10.0)
 
 def unregister():
     bpy.types.TOPBAR_MT_file_import.remove(view3d_menu_add)
@@ -284,6 +295,7 @@ def unregister():
     bpy.utils.unregister_class(WM_OT_ImportCollada)
     bpy.utils.unregister_class(WM_OT_ImportAlembic)
     bpy.utils.unregister_class(WM_OT_ImportUniversalSceneDescription)
+    bpy.utils.unregister_class(WM_OT_ImportSVGAsGreasePencil)
 
 
 if __name__ == "__main__":
